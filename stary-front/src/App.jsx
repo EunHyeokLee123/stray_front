@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import StrayAnimalList from "./pages/StrayAnimalList";
 import FestivalList from "./pages/FestivalList";
+import FacilityMapPage from "./pages/FacilityMapPage";
 
 function App() {
   const { fingerprint, loading } = useFingerprint();
@@ -19,7 +20,7 @@ function App() {
       case "festival":
         return <FestivalList />;
       case "facility":
-        return <div>시설 정보 페이지 (준비 중)</div>;
+        return <FacilityMapPage />;
       case "stray":
       default:
         return <StrayAnimalList />;
