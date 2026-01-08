@@ -29,9 +29,9 @@ if (clientHostName === "localhost" || clientHostName === "127.0.0.1") {
 }
 
 export const API_BASE_URL = backendHostName;
-export const FESTIVAL = "/festival-service";
 export const PET = "/pet-service/pet";
 export const TOKEN = "/pet-service/token/issue";
 export const MAP = "/map-service/map";
 export const HOSPITAL = "/map-service/hospital";
 export const STYLE = "/map-service/culture";
+export const FESTIVAL = "/map-service/festival";
