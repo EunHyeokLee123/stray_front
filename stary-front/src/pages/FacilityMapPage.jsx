@@ -445,7 +445,9 @@ const FacilityMapPage = () => {
             {/* 동물병원 목록 */}
             {selectedCategory === "hospital" && (
               <div className="list-section">
-                <h3 className="list-title">동물병원 목록</h3>
+                <h3 className="list-title">
+                  동물병원 목록 ({hospitalList.length}개)
+                </h3>
                 {isHospitalLoading ? (
                   <div className="loading-text">불러오는 중...</div>
                 ) : hospitalList.length === 0 ? (
@@ -480,27 +482,40 @@ const FacilityMapPage = () => {
             )}
 
             {/* 미용실 목록 */}
-            {isGroomingCategory && groomingList.length > 0 && (
+            {isGroomingCategory && (
               <div className="list-section">
-                <div className="card-list">
-                  {groomingList.map((shop) => (
-                    <div
-                      key={shop.id}
-                      className={`location-card ${
-                        selectedGroomingDetail &&
-                        selectedGroomingDetail.id === shop.id
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() => handleGroomingCardClick(shop)}
-                    >
-                      <div className="card-content">
-                        <h4 className="card-title">{shop.facilityName}</h4>
-                        <p className="card-address">{shop.fullAddress}</p>
+                <h3 className="list-title">
+                  {categories.find((cat) => cat.id === selectedCategory)
+                    ?.name || "시설 목록"}{" "}
+                  ({groomingList.length}개)
+                </h3>
+                {groomingList.length === 0 ? (
+                  <div className="empty-text">
+                    {categories.find((cat) => cat.id === selectedCategory)
+                      ?.name || "시설"}{" "}
+                    정보가 없습니다.
+                  </div>
+                ) : (
+                  <div className="card-list">
+                    {groomingList.map((shop) => (
+                      <div
+                        key={shop.id}
+                        className={`location-card ${
+                          selectedGroomingDetail &&
+                          selectedGroomingDetail.id === shop.id
+                            ? "active"
+                            : ""
+                        }`}
+                        onClick={() => handleGroomingCardClick(shop)}
+                      >
+                        <div className="card-content">
+                          <h4 className="card-title">{shop.facilityName}</h4>
+                          <p className="card-address">{shop.fullAddress}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -510,7 +525,7 @@ const FacilityMapPage = () => {
             <h3 className="map-title">위치 지도</h3>
             <div className="map-container">
               <MapComponent
-                key={selectedCategory}
+                //key={selectedCategory}
                 locations={getMapLocations()}
                 selectedLocation={selectedLocation}
                 onLocationClick={handleLocationClick}

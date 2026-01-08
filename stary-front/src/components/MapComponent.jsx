@@ -48,17 +48,67 @@ const MapComponent = ({
 
     const kakao = window.kakao;
 
-    // 지도 초기화
-    const container = mapRef.current;
-    if (!container) return;
+    // 지도 초기화 함수
+    const initializeMap = () => {
+      const container = mapRef.current;
+      if (!container) return false;
 
-    const options = {
-      center: new kakao.maps.LatLng(37.5665, 126.978),
-      level: 5,
+      // 컨테이너 크기 확인
+      const containerWidth = container.offsetWidth;
+      const containerHeight = container.offsetHeight;
+
+      // 컨테이너 크기가 0이면 초기화하지 않음
+      if (containerWidth === 0 || containerHeight === 0) {
+        return false;
+      }
+
+      // 기존 지도가 있으면 제거하지 않고 relayout만 호출
+      if (mapInstanceRef.current) {
+        setTimeout(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.relayout();
+          }
+        }, 100);
+        return true;
+      }
+
+      // 새 지도 생성
+      const options = {
+        center: new kakao.maps.LatLng(37.5665, 126.978),
+        level: 5,
+      };
+
+      const map = new kakao.maps.Map(container, options);
+      mapInstanceRef.current = map;
+
+      // 지도 초기화 후 relayout 호출하여 크기 재계산
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.relayout();
+        }
+      }, 100);
+
+      return true;
     };
 
-    const map = new kakao.maps.Map(container, options);
-    mapInstanceRef.current = map;
+    // 즉시 초기화 시도
+    if (!initializeMap()) {
+      // 실패하면 약간의 지연 후 다시 시도
+      const timer = setTimeout(() => {
+        if (!initializeMap()) {
+          // 여전히 실패하면 추가 지연 후 재시도
+          setTimeout(() => {
+            initializeMap();
+          }, 200);
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+
+    // 지도 인스턴스 가져오기
+    const map = mapInstanceRef.current;
+    if (!map) return;
 
     // 기존 마커 제거
     markersRef.current.forEach((marker) => marker.setMap(null));
@@ -206,6 +256,50 @@ const MapComponent = ({
     onLocationClick,
     kakaoLoaded,
   ]);
+
+  // 컨테이너 크기 변경 감지 및 지도 relayout
+  useEffect(() => {
+    if (!mapInstanceRef.current || !kakaoLoaded) return;
+
+    const container = mapRef.current;
+    if (!container) return;
+
+    // ResizeObserver를 사용하여 컨테이너 크기 변경 감지
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        // 크기가 유효한 경우에만 relayout 호출
+        if (width > 0 && height > 0 && mapInstanceRef.current) {
+          // 약간의 지연 후 relayout 호출
+          setTimeout(() => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.relayout();
+            }
+          }, 50);
+        }
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [kakaoLoaded, selectedCategory]);
+
+  // selectedCategory 변경 시 지도 relayout
+  useEffect(() => {
+    if (!mapInstanceRef.current || !kakaoLoaded) return;
+
+    // 카테고리 변경 시 약간의 지연 후 relayout 호출
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.relayout();
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [selectedCategory, kakaoLoaded]);
 
   if (!kakaoLoaded) {
     return (
