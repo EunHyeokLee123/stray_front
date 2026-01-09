@@ -19,13 +19,13 @@ const MapComponent = ({
 
   // 카카오맵 API 로드
   useEffect(() => {
-    if (window.kakao && window.kakao.maps) {
+    if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
       setKakaoLoaded(true);
       return;
     }
 
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${AppKey}&autoload=false`;
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${AppKey}&autoload=false&libraries=services`;
     script.async = true;
     script.onload = () => {
       if (window.kakao && window.kakao.maps) {
@@ -37,7 +37,9 @@ const MapComponent = ({
     document.head.appendChild(script);
 
     return () => {
-      document.head.removeChild(script);
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
     };
   }, []);
 
@@ -120,129 +122,162 @@ const MapComponent = ({
       infoWindowRef.current = null;
     }
 
-    // 위치가 있으면 마커 추가
-    if (locations && locations.length > 0) {
-      locations.forEach((location) => {
-        if (!location.lat || !location.lng) return;
+    // 선택된 위치만 마커로 표시
+    if (selectedLocation) {
+      console.log(selectedLocation);
 
-        const position = new kakao.maps.LatLng(location.lat, location.lng);
+      // 인포윈도우 콘텐츠 생성 함수
+      const createInfoWindowContent = () => {
+        if (selectedCategory === "culture" && selectedCultureDetail) {
+          return `
+            <div style="padding:10px;min-width:200px;">
+              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
+                selectedCultureDetail.title || ""
+              }</h4>
+              <p style="margin:0;font-size:12px;color:#666;">${
+                selectedCultureDetail.addr || selectedCultureDetail.addr1 || ""
+              }</p>
+              ${
+                selectedCultureDetail.tel
+                  ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedCultureDetail.tel}</p>`
+                  : ""
+              }
+            </div>
+          `;
+        } else if (selectedCategory === "hospital" && selectedHospitalInfo) {
+          return `
+            <div style="padding:10px;min-width:200px;">
+              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
+                selectedHospitalInfo.hospitalName || ""
+              }</h4>
+              <p style="margin:0;font-size:12px;color:#666;">${
+                selectedHospitalInfo.fullAddress || ""
+              }</p>
+              ${
+                selectedHospitalInfo.phoneNumber
+                  ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedHospitalInfo.phoneNumber}</p>`
+                  : ""
+              }
+            </div>
+          `;
+        } else if (selectedGroomingDetail) {
+          return `
+            <div style="padding:10px;min-width:200px;">
+              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
+                selectedGroomingDetail.facilityName || ""
+              }</h4>
+              <p style="margin:0;font-size:12px;color:#666;">${
+                selectedGroomingDetail.fullAddress || ""
+              }</p>
+              ${
+                selectedGroomingDetail.phoneNumber
+                  ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedGroomingDetail.phoneNumber}</p>`
+                  : ""
+              }
+            </div>
+          `;
+        } else {
+          const address =
+            selectedLocation.roadAddress ||
+            selectedLocation.fullAddress ||
+            selectedLocation.addr ||
+            selectedLocation.addr1 ||
+            "";
+          return `
+            <div style="padding:10px;min-width:200px;">
+              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
+                selectedLocation.name ||
+                selectedLocation.title ||
+                selectedLocation.hospitalName ||
+                ""
+              }</h4>
+              <p style="margin:0;font-size:12px;color:#666;">${address}</p>
+            </div>
+          `;
+        }
+      };
 
+      // 마커 생성 및 표시 함수
+      const createMarker = (coords) => {
         // 마커 생성
         const marker = new kakao.maps.Marker({
-          position: position,
+          position: coords,
           map: map,
         });
 
         // 마커 클릭 이벤트
         kakao.maps.event.addListener(marker, "click", () => {
           if (onLocationClick) {
-            onLocationClick(location);
+            onLocationClick(selectedLocation);
           }
         });
 
         markersRef.current.push(marker);
-      });
 
-      // 모든 마커가 보이도록 지도 범위 조정
-      if (locations.length > 0) {
-        const bounds = new kakao.maps.LatLngBounds();
-        locations.forEach((location) => {
-          if (location.lat && location.lng) {
-            bounds.extend(new kakao.maps.LatLng(location.lat, location.lng));
-          }
-        });
-        map.setBounds(bounds);
-      }
-    }
+        // 지도 중심을 마커 위치로 이동
+        map.setCenter(coords);
+        map.setLevel(3);
 
-    // 선택된 위치로 이동
-    if (selectedLocation && selectedLocation.lat && selectedLocation.lng) {
-      const position = new kakao.maps.LatLng(
-        selectedLocation.lat,
-        selectedLocation.lng
-      );
-      map.setCenter(position);
-      map.setLevel(3);
+        // 인포윈도우 표시
+        const content = createInfoWindowContent();
+        if (content) {
+          const infoWindow = new kakao.maps.InfoWindow({
+            content: content,
+          });
+          infoWindowRef.current = infoWindow;
+          infoWindow.open(map, marker);
+        }
+      };
 
-      // 인포윈도우 표시
-      let content = "";
+      // culture와 hospital은 주소를 사용하여 좌표 변환
+      if (selectedCategory === "culture" || selectedCategory === "hospital") {
+        // services 라이브러리가 로드되었는지 확인
+        if (!kakao.maps.services) {
+          console.error("카카오맵 services 라이브러리가 로드되지 않았습니다.");
+          return;
+        }
 
-      if (selectedCategory === "culture" && selectedCultureDetail) {
-        content = `
-          <div style="padding:10px;min-width:200px;">
-            <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-              selectedCultureDetail.title || ""
-            }</h4>
-            <p style="margin:0;font-size:12px;color:#666;">${
-              selectedCultureDetail.addr || selectedCultureDetail.addr1 || ""
-            }</p>
-            ${
-              selectedCultureDetail.tel
-                ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedCultureDetail.tel}</p>`
-                : ""
+        // 주소 정보 확인
+        let address = "";
+        if (selectedCategory === "culture") {
+          // 반려동물 문화시설일 때는 addr1 사용
+          address = selectedLocation.addr1 || selectedLocation.addr || "";
+        } else if (selectedCategory === "hospital") {
+          // 동물병원일 때는 fullAddress 사용
+          address =
+            selectedLocation.fullAddress || selectedLocation.address || "";
+        }
+
+        if (address) {
+          const geocoder = new kakao.maps.services.Geocoder();
+
+          // addressSearch를 사용하여 주소를 좌표로 변환
+          geocoder.addressSearch(address, (result, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+              // 첫 번째 결과 사용
+              const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+              createMarker(coords);
+            } else {
+              // 주소 검색 실패
+              console.warn(`주소 검색 실패: ${address}`, status);
             }
-          </div>
-        `;
-      } else if (selectedCategory === "hospital" && selectedHospitalInfo) {
-        content = `
-          <div style="padding:10px;min-width:200px;">
-            <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-              selectedHospitalInfo.hospitalName || ""
-            }</h4>
-            <p style="margin:0;font-size:12px;color:#666;">${
-              selectedHospitalInfo.fullAddress || ""
-            }</p>
-            ${
-              selectedHospitalInfo.phoneNumber
-                ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedHospitalInfo.phoneNumber}</p>`
-                : ""
-            }
-          </div>
-        `;
-      } else if (selectedGroomingDetail) {
-        content = `
-          <div style="padding:10px;min-width:200px;">
-            <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-              selectedGroomingDetail.facilityName || ""
-            }</h4>
-            <p style="margin:0;font-size:12px;color:#666;">${
-              selectedGroomingDetail.fullAddress || ""
-            }</p>
-            ${
-              selectedGroomingDetail.phoneNumber
-                ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedGroomingDetail.phoneNumber}</p>`
-                : ""
-            }
-          </div>
-        `;
+          });
+        }
       } else {
-        content = `
-          <div style="padding:10px;min-width:200px;">
-            <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-              selectedLocation.name || ""
-            }</h4>
-            <p style="margin:0;font-size:12px;color:#666;">${
-              selectedLocation.address || ""
-            }</p>
-          </div>
-        `;
-      }
-
-      if (content) {
-        const infoWindow = new kakao.maps.InfoWindow({
-          content: content,
-        });
-        infoWindowRef.current = infoWindow;
-        infoWindow.open(
-          map,
-          markersRef.current.find((m) => {
-            const pos = m.getPosition();
-            return (
-              Math.abs(pos.getLat() - selectedLocation.lat) < 0.0001 &&
-              Math.abs(pos.getLng() - selectedLocation.lng) < 0.0001
-            );
-          }) || null
-        );
+        // 나머지 카테고리는 mapx, mapy를 직접 사용
+        if (
+          selectedLocation.mapx !== undefined &&
+          selectedLocation.mapy !== undefined
+        ) {
+          // mapx는 경도(longitude), mapy는 위도(latitude)
+          const coords = new kakao.maps.LatLng(
+            selectedLocation.mapx,
+            selectedLocation.mapy
+          );
+          createMarker(coords);
+        } else {
+          console.warn("좌표 정보(mapx, mapy)가 없습니다.", selectedLocation);
+        }
       }
     }
   }, [

@@ -124,9 +124,33 @@ const FacilityMapPage = () => {
         .then((res) => {
           const list = res.data?.result || [];
           setGroomingList(list);
+          // 첫 번째 아이템을 기본 선택
+          if (list.length > 0) {
+            const firstShop = list.find(
+              (shop) =>
+                shop.facilityName && (shop.fullAddress || shop.roadAddress)
+            );
+            if (firstShop) {
+              // selectedLocation 설정
+              setSelectedLocation(firstShop);
+              // 첫 번째 아이템의 상세 정보도 로드
+              axiosInstance
+                .get(`${STYLE}/detail/${selectedCategory}/${firstShop.id}`)
+                .then((detailRes) => {
+                  setSelectedGroomingDetail(detailRes.data.result || null);
+                })
+                .catch(() => {
+                  setSelectedGroomingDetail(null);
+                });
+            }
+          } else {
+            setSelectedLocation(null);
+            setSelectedGroomingDetail(null);
+          }
         })
         .catch((err) => {
           setGroomingList([]);
+          setSelectedGroomingDetail(null);
         });
     }
   }, [
@@ -146,10 +170,35 @@ const FacilityMapPage = () => {
           contentType: selectedCultureSubCategory,
         })
         .then((res) => {
-          setCultureLocations(res.data?.result || res.data || []);
+          const locations = res.data?.result || res.data || [];
+          setCultureLocations(locations);
+          // 첫 번째 아이템을 기본 선택
+          if (locations.length > 0) {
+            const firstLocation = locations.find(
+              (location) => location.addr || location.addr1
+            );
+            if (firstLocation) {
+              setSelectedLocation(firstLocation);
+              // 첫 번째 아이템의 상세 정보도 로드
+              axiosInstance
+                .get(`${MAP}/detail/${firstLocation.mapId}`)
+                .then((detailRes) => {
+                  setSelectedCultureDetail(
+                    detailRes.data?.result || detailRes.data || null
+                  );
+                })
+                .catch(() => {
+                  setSelectedCultureDetail(null);
+                });
+            }
+          } else {
+            setSelectedLocation(null);
+            setSelectedCultureDetail(null);
+          }
         })
         .catch((err) => {
           setCultureLocations([]);
+          setSelectedLocation(null);
         })
         .finally(() => setIsCultureLoading(false));
     }
@@ -190,9 +239,33 @@ const FacilityMapPage = () => {
             ? res.data.result
             : [];
           setHospitalList(hospitalData);
+          // 첫 번째 아이템을 기본 선택
+          if (hospitalData.length > 0) {
+            const firstHospital = hospitalData.find(
+              (h) => h.hospitalName && h.fullAddress
+            );
+            if (firstHospital) {
+              setSelectedLocation(firstHospital);
+              // 첫 번째 아이템의 상세 정보도 로드
+              axiosInstance
+                .get(`${HOSPITAL}/detail/${firstHospital.hospitalId}`)
+                .then((detailRes) => {
+                  setSelectedHospitalInfo(
+                    detailRes.data?.result || detailRes.data || null
+                  );
+                })
+                .catch(() => {
+                  setSelectedHospitalInfo(null);
+                });
+            }
+          } else {
+            setSelectedLocation(null);
+            setSelectedHospitalInfo(null);
+          }
         })
         .catch((err) => {
           setHospitalList([]);
+          setSelectedLocation(null);
         })
         .finally(() => setIsHospitalLoading(false));
     }
@@ -248,6 +321,9 @@ const FacilityMapPage = () => {
   };
 
   const handleGroomingCardClick = (shop) => {
+    // selectedLocation 설정
+    setSelectedLocation(shop);
+    // 상세 정보 로드
     axiosInstance
       .get(`${STYLE}/detail/${selectedCategory}/${shop.id}`)
       .then((res) => {
@@ -262,15 +338,18 @@ const FacilityMapPage = () => {
     if (isGroomingCategory) {
       return [];
     } else if (selectedCategory === "culture") {
-      return cultureLocations;
+      // 반려동물 문화시설: addr1 사용
+      return cultureLocations.map((location) => ({
+        ...location,
+        addr1: location.addr1 || location.addr,
+      }));
     } else if (selectedCategory === "hospital") {
+      // 동물병원: fullAddress 사용
       return (Array.isArray(hospitalList) ? hospitalList : []).map((h) => ({
         id: h.hospitalId,
         name: h.hospitalName,
-        address: h.fullAddress,
+        fullAddress: h.fullAddress,
         category: "hospital",
-        lat: h.mapy,
-        lng: h.mapx,
       }));
     }
     return [];
@@ -525,7 +604,7 @@ const FacilityMapPage = () => {
             <h3 className="map-title">위치 지도</h3>
             <div className="map-container">
               <MapComponent
-                //key={selectedCategory}
+                key={selectedCategory}
                 locations={getMapLocations()}
                 selectedLocation={selectedLocation}
                 onLocationClick={handleLocationClick}
