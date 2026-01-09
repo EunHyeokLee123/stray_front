@@ -28,6 +28,10 @@ const FacilityMapPage = () => {
   const [selectedGroomingDistrict, setSelectedGroomingDistrict] = useState("");
   const [groomingList, setGroomingList] = useState([]);
   const [selectedGroomingDetail, setSelectedGroomingDetail] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalData, setModalData] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState(null);
 
   const cultureSubCategories = [
     { value: "12", name: "관광지" },
@@ -334,6 +338,47 @@ const FacilityMapPage = () => {
       });
   };
 
+  // 마커 클릭 시 상세 정보 모달 표시
+  const handleMarkerClick = async (location) => {
+    if (!location) return;
+
+    setShowModal(true);
+    setModalLoading(true);
+    setModalError(null);
+    setModalData(null);
+
+    try {
+      let response;
+      if (selectedCategory === "culture") {
+        // 반려동물 문화시설
+        response = await axiosInstance.get(`${MAP}/detail/${location.mapId}`);
+      } else if (selectedCategory === "hospital") {
+        // 동물병원
+        response = await axiosInstance.get(
+          `${HOSPITAL}/detail/${location.hospitalId}`
+        );
+      } else {
+        // 나머지 카테고리
+        response = await axiosInstance.get(
+          `${STYLE}/detail/${selectedCategory}/${location.id}`
+        );
+      }
+
+      setModalData(response.data?.result || response.data || null);
+    } catch (err) {
+      setModalError("상세 정보를 불러오는 중 오류가 발생했습니다.");
+      console.error("상세 정보 로드 실패:", err);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setModalData(null);
+    setModalError(null);
+  };
+
   const getMapLocations = () => {
     if (isGroomingCategory) {
       return [];
@@ -608,6 +653,7 @@ const FacilityMapPage = () => {
                 locations={getMapLocations()}
                 selectedLocation={selectedLocation}
                 onLocationClick={handleLocationClick}
+                onMarkerClick={handleMarkerClick}
                 selectedCultureDetail={
                   selectedCategory === "culture" ? selectedCultureDetail : null
                 }
@@ -624,6 +670,334 @@ const FacilityMapPage = () => {
           </div>
         </div>
       </div>
+
+      {/* 상세 정보 모달 */}
+      {showModal && (
+        <div className="detail-modal-backdrop" onClick={closeModal}>
+          <div
+            className="detail-modal"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {modalLoading && (
+              <div className="detail-loading">
+                <div className="loader"></div>
+                <p className="loading-text">상세 정보를 불러오는 중...</p>
+              </div>
+            )}
+
+            {modalError && !modalLoading && (
+              <div className="detail-error">
+                <p className="error-text">{modalError}</p>
+                <button className="retry-button" onClick={closeModal}>
+                  닫기
+                </button>
+              </div>
+            )}
+
+            {modalData && !modalLoading && !modalError && (
+              <>
+                <div className="detail-header">
+                  <h2 className="detail-title">
+                    {selectedCategory === "culture"
+                      ? modalData.title || "문화시설 상세"
+                      : selectedCategory === "hospital"
+                      ? modalData.businessName || "동물병원 상세"
+                      : modalData.facilityName || "시설 상세"}
+                  </h2>
+                  <button className="detail-close" onClick={closeModal}>
+                    ×
+                  </button>
+                </div>
+
+                <div className="detail-content">
+                  {/* 반려동물 문화시설 */}
+                  {selectedCategory === "culture" && (
+                    <div className="detail-info-grid">
+                      {modalData.image1 && (
+                        <div className="detail-image-container">
+                          <img
+                            src={modalData.image1}
+                            alt={modalData.title || "이미지"}
+                            className="detail-image"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        </div>
+                      )}
+                      {modalData.image2 && (
+                        <div className="detail-image-container">
+                          <img
+                            src={modalData.image2}
+                            alt={modalData.title || "이미지"}
+                            className="detail-image"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="detail-info-item">
+                        <span className="detail-label">주소</span>
+                        <span className="detail-value">
+                          {modalData.addr1 || modalData.addr2 || "-"}
+                        </span>
+                      </div>
+                      {modalData.tel && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">전화번호</span>
+                          <span className="detail-value">{modalData.tel}</span>
+                        </div>
+                      )}
+                      {modalData.contentType && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">카테고리</span>
+                          <span className="detail-value">
+                            {modalData.contentType}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 동물병원 */}
+                  {selectedCategory === "hospital" && (
+                    <div className="detail-info-grid">
+                      <div className="detail-info-item">
+                        <span className="detail-label">사업장명</span>
+                        <span className="detail-value">
+                          {modalData.businessName || "-"}
+                        </span>
+                      </div>
+                      <div className="detail-info-item">
+                        <span className="detail-label">개방서비스명</span>
+                        <span className="detail-value">
+                          {modalData.serviceName || "-"}
+                        </span>
+                      </div>
+                      {modalData.phoneNumber && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">전화번호</span>
+                          <span className="detail-value">
+                            {modalData.phoneNumber}
+                          </span>
+                        </div>
+                      )}
+                      <div className="detail-info-item">
+                        <span className="detail-label">지번주소</span>
+                        <span className="detail-value">
+                          {modalData.fullAddress || "-"}
+                        </span>
+                      </div>
+                      {modalData.roadAddress && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">도로명주소</span>
+                          <span className="detail-value">
+                            {modalData.roadAddress}
+                          </span>
+                        </div>
+                      )}
+                      {modalData.postalCode && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">우편번호</span>
+                          <span className="detail-value">
+                            {modalData.postalCode}
+                          </span>
+                        </div>
+                      )}
+                      {modalData.approvalDate && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">인허가일자</span>
+                          <span className="detail-value">
+                            {modalData.approvalDate}
+                          </span>
+                        </div>
+                      )}
+                      {modalData.siteArea && (
+                        <div className="detail-info-item">
+                          <span className="detail-label">소재지면적</span>
+                          <span className="detail-value">
+                            {modalData.siteArea}㎡
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 나머지 카테고리 */}
+                  {selectedCategory !== "culture" &&
+                    selectedCategory !== "hospital" && (
+                      <div className="detail-info-grid">
+                        <div className="detail-info-item">
+                          <span className="detail-label">시설명</span>
+                          <span className="detail-value">
+                            {modalData.facilityName || "-"}
+                          </span>
+                        </div>
+                        {modalData.roadAddress && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">도로명주소</span>
+                            <span className="detail-value">
+                              {modalData.roadAddress}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.fullAddress && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">지번주소</span>
+                            <span className="detail-value">
+                              {modalData.fullAddress}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.telNum && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">전화번호</span>
+                            <span className="detail-value">
+                              {modalData.telNum}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.url && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">홈페이지</span>
+                            <span className="detail-value">
+                              <a
+                                href={modalData.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {modalData.url}
+                              </a>
+                            </span>
+                          </div>
+                        )}
+                        {modalData.operTime && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">운영시간</span>
+                            <span className="detail-value">
+                              {modalData.operTime}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.restInfo && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">휴무일</span>
+                            <span className="detail-value">
+                              {modalData.restInfo}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.parking && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">주차가능여부</span>
+                            <span className="detail-value">
+                              {modalData.parking}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.price && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">이용가격</span>
+                            <span className="detail-value">
+                              {modalData.price}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.petWith && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">
+                              반려동물가능여부
+                            </span>
+                            <span className="detail-value">
+                              {modalData.petWith}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.petSize && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">
+                              입장가능반려동물크기
+                            </span>
+                            <span className="detail-value">
+                              {modalData.petSize}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.petRestrict && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">
+                              반려동물제한사항
+                            </span>
+                            <span className="detail-value">
+                              {modalData.petRestrict}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.extraFee && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">
+                              반려동물동반추가요금
+                            </span>
+                            <span className="detail-value">
+                              {modalData.extraFee}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.inPlace && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">
+                              내부장소동반가능여부
+                            </span>
+                            <span className="detail-value">
+                              {modalData.inPlace}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.outPlace && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">
+                              외부장소동반가능여부
+                            </span>
+                            <span className="detail-value">
+                              {modalData.outPlace}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.infoDesc && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">시설정보설명</span>
+                            <span className="detail-value">
+                              {modalData.infoDesc}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.petInfo && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">반려동물정보</span>
+                            <span className="detail-value">
+                              {modalData.petInfo}
+                            </span>
+                          </div>
+                        )}
+                        {modalData.lastUpdate && (
+                          <div className="detail-info-item">
+                            <span className="detail-label">최종수정일자</span>
+                            <span className="detail-value">
+                              {modalData.lastUpdate}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

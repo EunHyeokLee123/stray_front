@@ -4,6 +4,7 @@ const MapComponent = ({
   locations = [],
   selectedLocation,
   onLocationClick,
+  onMarkerClick,
   selectedCultureDetail,
   selectedHospitalInfo,
   selectedHospitalDetail,
@@ -124,79 +125,6 @@ const MapComponent = ({
 
     // 선택된 위치만 마커로 표시
     if (selectedLocation) {
-      console.log(selectedLocation);
-
-      // 인포윈도우 콘텐츠 생성 함수
-      const createInfoWindowContent = () => {
-        if (selectedCategory === "culture" && selectedCultureDetail) {
-          return `
-            <div style="padding:10px;min-width:200px;">
-              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-                selectedCultureDetail.title || ""
-              }</h4>
-              <p style="margin:0;font-size:12px;color:#666;">${
-                selectedCultureDetail.addr || selectedCultureDetail.addr1 || ""
-              }</p>
-              ${
-                selectedCultureDetail.tel
-                  ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedCultureDetail.tel}</p>`
-                  : ""
-              }
-            </div>
-          `;
-        } else if (selectedCategory === "hospital" && selectedHospitalInfo) {
-          return `
-            <div style="padding:10px;min-width:200px;">
-              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-                selectedHospitalInfo.hospitalName || ""
-              }</h4>
-              <p style="margin:0;font-size:12px;color:#666;">${
-                selectedHospitalInfo.fullAddress || ""
-              }</p>
-              ${
-                selectedHospitalInfo.phoneNumber
-                  ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedHospitalInfo.phoneNumber}</p>`
-                  : ""
-              }
-            </div>
-          `;
-        } else if (selectedGroomingDetail) {
-          return `
-            <div style="padding:10px;min-width:200px;">
-              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-                selectedGroomingDetail.facilityName || ""
-              }</h4>
-              <p style="margin:0;font-size:12px;color:#666;">${
-                selectedGroomingDetail.fullAddress || ""
-              }</p>
-              ${
-                selectedGroomingDetail.phoneNumber
-                  ? `<p style="margin:5px 0 0 0;font-size:12px;">전화: ${selectedGroomingDetail.phoneNumber}</p>`
-                  : ""
-              }
-            </div>
-          `;
-        } else {
-          const address =
-            selectedLocation.roadAddress ||
-            selectedLocation.fullAddress ||
-            selectedLocation.addr ||
-            selectedLocation.addr1 ||
-            "";
-          return `
-            <div style="padding:10px;min-width:200px;">
-              <h4 style="margin:0 0 5px 0;font-weight:bold;">${
-                selectedLocation.name ||
-                selectedLocation.title ||
-                selectedLocation.hospitalName ||
-                ""
-              }</h4>
-              <p style="margin:0;font-size:12px;color:#666;">${address}</p>
-            </div>
-          `;
-        }
-      };
-
       // 마커 생성 및 표시 함수
       const createMarker = (coords) => {
         // 마커 생성
@@ -207,8 +135,8 @@ const MapComponent = ({
 
         // 마커 클릭 이벤트
         kakao.maps.event.addListener(marker, "click", () => {
-          if (onLocationClick) {
-            onLocationClick(selectedLocation);
+          if (onMarkerClick) {
+            onMarkerClick(selectedLocation);
           }
         });
 
@@ -217,16 +145,6 @@ const MapComponent = ({
         // 지도 중심을 마커 위치로 이동
         map.setCenter(coords);
         map.setLevel(3);
-
-        // 인포윈도우 표시
-        const content = createInfoWindowContent();
-        if (content) {
-          const infoWindow = new kakao.maps.InfoWindow({
-            content: content,
-          });
-          infoWindowRef.current = infoWindow;
-          infoWindow.open(map, marker);
-        }
       };
 
       // culture와 hospital은 주소를 사용하여 좌표 변환
@@ -270,6 +188,7 @@ const MapComponent = ({
           selectedLocation.mapy !== undefined
         ) {
           // mapx는 경도(longitude), mapy는 위도(latitude)
+          // 카카오맵 LatLng는 (위도, 경도) 순서이므로 (mapy, mapx)
           const coords = new kakao.maps.LatLng(
             selectedLocation.mapx,
             selectedLocation.mapy
@@ -289,6 +208,7 @@ const MapComponent = ({
     selectedCategory,
     selectedGroomingDetail,
     onLocationClick,
+    onMarkerClick,
     kakaoLoaded,
   ]);
 
