@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../configs/axios-config.js";
 import "./StrayAnimalList.css";
 import { API_BASE_URL, PET } from "../../configs/host-config.js";
 
 const StrayAnimalList = () => {
+  const navigate = useNavigate();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,12 +17,6 @@ const StrayAnimalList = () => {
   // 필터 상태
   const [selectedRegion, setSelectedRegion] = useState("전체");
   const [selectedCategory, setSelectedCategory] = useState("개");
-
-  // 상세 보기 상태
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(null);
-  const [detailData, setDetailData] = useState(null);
-  const [viewMode, setViewMode] = useState("list"); // list | detail
 
   const regions = [
     "전체",
@@ -182,185 +178,16 @@ const StrayAnimalList = () => {
 
   const transformedAnimals = animals.map(transformAnimalData);
 
-  // 상세 조회
-  const fetchDetail = async (desertionNo) => {
+  // 상세 페이지로 이동
+  const handleDetailClick = (desertionNo) => {
     if (!desertionNo) return;
-    setViewMode("detail");
-    setDetailLoading(true);
-    setDetailError(null);
-    try {
-      const res = await axiosInstance.get(`${PET}/detail/${desertionNo}`);
-      console.log(res);
-      const data = res.data?.result || res.data;
-      setDetailData(data);
-    } catch (err) {
-      console.error("상세 조회 실패:", err);
-      setDetailError("상세 정보를 불러오지 못했습니다.");
-      setDetailData(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const closeDetail = () => {
-    setDetailData(null);
-    setDetailError(null);
-    setDetailLoading(false);
-    setViewMode("list");
+    navigate(`/stray/detail/${desertionNo}`);
   };
 
   return (
     <div className="stray-animal-list-page">
       <div className="stray-animal-container">
-        {viewMode === "detail" ? (
-          <div className="detail-page">
-            <div className="detail-page-header">
-              <button className="back-button" onClick={closeDetail}>
-                ← 목록으로
-              </button>
-              <h1 className="page-title">
-                {detailData?.kindNm || "유기동물 상세"}
-              </h1>
-            </div>
-
-            {detailLoading && (
-              <div className="detail-loading">
-                <div className="loader"></div>
-                <p className="loading-text">상세 정보를 불러오는 중...</p>
-              </div>
-            )}
-
-            {detailError && !detailLoading && (
-              <div className="detail-error">
-                <p className="error-text">{detailError}</p>
-                <button className="retry-button" onClick={closeDetail}>
-                  닫기
-                </button>
-              </div>
-            )}
-
-            {detailData && !detailLoading && !detailError && (
-              <div className="detail-layout">
-                <div className="detail-gallery">
-                  {[detailData.popfile1, detailData.popfile2]
-                    .filter(Boolean)
-                    .map((src, idx) => (
-                      <div key={idx} className="detail-image-box">
-                        <img
-                          src={src}
-                          alt={detailData.kindNm || "유기동물"}
-                          onError={(e) => {
-                            e.target.src = "/logo.png";
-                          }}
-                        />
-                      </div>
-                    ))}
-                  {[detailData.popfile1, detailData.popfile2].every(
-                    (v) => !v
-                  ) && (
-                    <div className="detail-image-box">
-                      <img src="/logo.png" alt="이미지 없음" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="detail-grid">
-                  <div className="detail-row">
-                    <span className="detail-label">유기번호</span>
-                    <span className="detail-value">
-                      {detailData.desertionNo || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">축종</span>
-                    <span className="detail-value">
-                      {detailData.upKindNm || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">품종</span>
-                    <span className="detail-value">
-                      {detailData.kindNm || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">털색</span>
-                    <span className="detail-value">
-                      {detailData.colorCd || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">나이</span>
-                    <span className="detail-value">
-                      {detailData.age || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">체중</span>
-                    <span className="detail-value">
-                      {detailData.weight || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">성별</span>
-                    <span className="detail-value">
-                      {detailData.sexCd || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">중성화</span>
-                    <span className="detail-value">
-                      {detailData.neuterYn || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">발생일</span>
-                    <span className="detail-value">
-                      {detailData.happenDt || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">발생장소</span>
-                    <span className="detail-value">
-                      {detailData.happenPlace || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">보호소</span>
-                    <span className="detail-value">
-                      {detailData.careNm || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">보호소 전화</span>
-                    <span className="detail-value">
-                      {detailData.careTel || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">보호소 주소</span>
-                    <span className="detail-value">
-                      {detailData.careAddr || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">특이사항</span>
-                    <span className="detail-value">
-                      {detailData.specialMark || "-"}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">기타</span>
-                    <span className="detail-value">
-                      {detailData.etcBigo || "-"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
+        <>
             <div className="page-header">
               <h1 className="page-title">유기동물 정보</h1>
               <p className="page-subtitle">새로운 가족을 기다리는 아이들</p>
@@ -464,13 +291,13 @@ const StrayAnimalList = () => {
                           onError={(e) => {
                             e.target.src = "/logo.png";
                           }}
-                          onClick={() => fetchDetail(animal.desertionNo)}
+                          onClick={() => handleDetailClick(animal.desertionNo)}
                         />
                       </div>
                       <div className="card-content">
                         <h3
                           className="card-title"
-                          onClick={() => fetchDetail(animal.desertionNo)}
+                          onClick={() => handleDetailClick(animal.desertionNo)}
                         >
                           {animal.title}
                         </h3>
@@ -590,8 +417,7 @@ const StrayAnimalList = () => {
                   })()}
               </>
             )}
-          </>
-        )}
+        </>
       </div>
     </div>
   );

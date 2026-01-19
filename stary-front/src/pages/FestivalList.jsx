@@ -1,20 +1,17 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../configs/axios-config.js";
 import "./FestivalList.css";
 import { FESTIVAL } from "../../configs/host-config.js";
 
 const FestivalList = () => {
+  const navigate = useNavigate();
   const [festivals, setFestivals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [_totalElements, setTotalElements] = useState(0);
-
-  // 상세 조회 상태
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(null);
-  const [detailData, setDetailData] = useState(null);
 
   // 행사 목록 조회 함수
   const fetchFestivals = async (page = 0) => {
@@ -52,28 +49,10 @@ const FestivalList = () => {
     fetchFestivals(page);
   };
 
-  // 상세 조회 함수
-  const fetchDetail = async (festivalId) => {
+  // 상세 페이지로 이동
+  const handleDetailClick = (festivalId) => {
     if (!festivalId) return;
-    setDetailLoading(true);
-    setDetailError(null);
-    try {
-      const res = await axiosInstance.get(`${FESTIVAL}/detail/${festivalId}`);
-      console.log(res);
-      const data = res.data?.result || res.data;
-      setDetailData(data);
-    } catch (err) {
-      console.error("상세 조회 실패:", err);
-      setDetailError("상세 정보를 불러오지 못했습니다.");
-      setDetailData(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const closeDetail = () => {
-    setDetailData(null);
-    setDetailError(null);
+    navigate(`/festival/detail/${festivalId}`);
   };
 
   // 컴포넌트 마운트 시 데이터 로드
@@ -125,7 +104,7 @@ const FestivalList = () => {
                 <div
                   key={festival.festivalId || index}
                   className="festival-card"
-                  onClick={() => fetchDetail(festival.festivalId)}
+                  onClick={() => handleDetailClick(festival.festivalId)}
                 >
                   <div className="festival-card-content">
                     <h3 className="festival-title">
@@ -243,114 +222,6 @@ const FestivalList = () => {
               </div>
             )}
           </>
-        )}
-
-        {/* 상세 모달 */}
-        {(detailData || detailLoading || detailError) && (
-          <div className="detail-modal-backdrop" onClick={closeDetail}>
-            <div
-              className="detail-modal"
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              {detailLoading && (
-                <div className="detail-loading">
-                  <div className="loader"></div>
-                  <p className="loading-text">상세 정보를 불러오는 중...</p>
-                </div>
-              )}
-
-              {detailError && !detailLoading && (
-                <div className="detail-error">
-                  <p className="error-text">{detailError}</p>
-                  <button className="retry-button" onClick={closeDetail}>
-                    닫기
-                  </button>
-                </div>
-              )}
-
-              {detailData && !detailLoading && !detailError && (
-                <>
-                  <div className="detail-header">
-                    <h2 className="detail-title">
-                      {detailData.title || "행사 상세"}
-                    </h2>
-                    <button className="detail-close" onClick={closeDetail}>
-                      ×
-                    </button>
-                  </div>
-
-                  <div className="detail-content">
-                    {detailData.imagePath && (
-                      <div className="detail-image-container">
-                        <img
-                          src={detailData.imagePath}
-                          alt={detailData.title || "행사 이미지"}
-                          className="detail-image"
-                          onError={(e) => {
-                            e.target.src = "/logo.png";
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    <div className="detail-info-grid">
-                      <div className="detail-info-row">
-                        <span className="detail-label">위치:</span>
-                        <span className="detail-value">
-                          {detailData.location || "-"}
-                        </span>
-                      </div>
-                      <div className="detail-info-row">
-                        <span className="detail-label">행사일:</span>
-                        <span className="detail-value">
-                          {detailData.festivalDate || "-"}
-                        </span>
-                      </div>
-                      <div className="detail-info-row">
-                        <span className="detail-label">진행시간:</span>
-                        <span className="detail-value">
-                          {detailData.festivalTime || "-"}
-                        </span>
-                      </div>
-                      <div className="detail-info-row">
-                        <span className="detail-label">행사요금:</span>
-                        <span className="detail-value">
-                          {detailData.money || "-"}
-                        </span>
-                      </div>
-                      <div className="detail-info-row">
-                        <span className="detail-label">예약일:</span>
-                        <span className="detail-value">
-                          {detailData.reservationDate || "-"}
-                        </span>
-                      </div>
-                      <div className="detail-info-row">
-                        <span className="detail-label">주소:</span>
-                        <span className="detail-value">
-                          {detailData.addr || "-"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {detailData.url && (
-                      <div className="detail-footer">
-                        <button
-                          className="homepage-button"
-                          onClick={() => {
-                            window.open(detailData.url, "_blank");
-                          }}
-                        >
-                          홈페이지보기
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
         )}
       </div>
     </div>
