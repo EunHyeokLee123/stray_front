@@ -46,9 +46,6 @@ const FestivalDetail = () => {
             >
               ← 목록으로
             </button>
-            <h1 className="page-title">
-              {detailData?.title || "행사 상세"}
-            </h1>
           </div>
 
           {detailLoading && (
@@ -72,20 +69,14 @@ const FestivalDetail = () => {
 
           {detailData && !detailLoading && !detailError && (
             <div className="detail-content">
-              {detailData.imagePath && (
-                <div className="detail-image-container">
-                  <img
-                    src={detailData.imagePath}
-                    alt={detailData.title || "행사 이미지"}
-                    className="detail-image"
-                    onError={(e) => {
-                      e.target.src = "/logo.png";
-                    }}
-                  />
-                </div>
-              )}
-
               <div className="detail-info-grid">
+                <div className="detail-info-row">
+                  <span className="detail-value">
+                  <h1 className="detail-title">
+                    {detailData?.title || "행사 상세"}
+            </h1>
+                  </span>
+                </div>
                 <div className="detail-info-row">
                   <span className="detail-label">위치:</span>
                   <span className="detail-value">
@@ -123,6 +114,20 @@ const FestivalDetail = () => {
                   </span>
                 </div>
               </div>
+
+              {detailData.imagePath && (
+                <div className="detail-image-container">
+                  <img
+                    src={detailData.imagePath}
+                    alt={detailData.title || "행사 이미지"}
+                    className="detail-image"
+                    onError={(e) => {
+                      e.target.src = "/logo.png";
+                    }}
+                  />
+                </div>
+              )}
+
 
               {detailData.url && (
                 <div className="detail-footer">

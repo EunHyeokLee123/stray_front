@@ -224,7 +224,7 @@
 }
 
 .detail-image-container {
-  width: 100%;
+  width: 50%;
   margin-bottom: 1.5rem;
   border-radius: 16px;
   overflow: hidden;
@@ -407,6 +407,7 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
+
 }
 
 .back-button {
